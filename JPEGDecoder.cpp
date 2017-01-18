@@ -41,7 +41,7 @@ JPEGDecoder::JPEGDecoder(){
 
 
 JPEGDecoder::~JPEGDecoder(){
-    delete pImage;
+    pImage = 0;//delete pImage;
 }
 
 
@@ -86,7 +86,7 @@ int JPEGDecoder::decode_mcu(void) {
     if (status) {
         is_available = 0 ;
         mcu_y = 0;
-        delete pImage;
+		pImage = 0;//delete pImage;
 		
 #ifdef LOAD_SPIFFS
         if (jpg_source == JPEG_FS_FILE) g_pInFileFs.close();
@@ -102,7 +102,7 @@ int JPEGDecoder::decode_mcu(void) {
             Serial.println(status);
             #endif
 
-            delete pImage;
+            pImage = 0;//delete pImage;
             return -1;
         }
     }
@@ -117,7 +117,7 @@ int JPEGDecoder::read(void) {
     if(is_available == 0) return 0;
 
     if (mcu_y >= image_info.m_MCUSPerCol) {
-        delete pImage;
+        pImage = 0;//delete pImage;
 		
 #ifdef LOAD_SPIFFS
         if (jpg_source == JPEG_FS_FILE) g_pInFileFs.close();
@@ -310,9 +310,9 @@ int JPEGDecoder::decodeArray(const uint8_t array[], uint32_t  array_size) {
     return decodeCommon();
 }
 
-
-int JPEGDecoder::decodeCommon(void) {
-
+uint16_t img[16*16];
+int JPEGDecoder::decodeCommon(void)
+{
     status = pjpeg_decode_init(&image_info, pjpeg_callback, NULL, 0);
 
     if (status) {
@@ -332,6 +332,9 @@ int JPEGDecoder::decodeCommon(void) {
     decoded_height =  image_info.m_height;
 
     row_pitch = image_info.m_MCUWidth;
+#if 0
+//Sketch uses 119,656 bytes (91%) of program storage space. Maximum is 131,072 bytes.
+//Global variables use 8,776 bytes of dynamic memory.
     pImage = new uint16_t[image_info.m_MCUWidth * image_info.m_MCUHeight];
     if (!pImage) {
         #ifdef DEBUG
@@ -340,6 +343,11 @@ int JPEGDecoder::decodeCommon(void) {
 
         return -1;
     }
+#else
+//Sketch uses 63,916 bytes (48%) of program storage space. Maximum is 131,072 bytes.
+//Global variables use 7,152 bytes of dynamic memory.
+	pImage = img;
+#endif
     memset(pImage , 0 , sizeof(pImage));
 
     row_blocks_per_mcu = image_info.m_MCUWidth >> 3;
@@ -364,7 +372,7 @@ void JPEGDecoder::abort(void) {
     mcu_x = 0 ;
     mcu_y = 0 ;
     is_available = 0;
-    delete pImage;
+    pImage = 0;//delete pImage;
 	
   #ifdef LOAD_SPIFFS
 	if (jpg_source == JPEG_FS_FILE) if (g_pInFileFs) g_pInFileFs.close();
