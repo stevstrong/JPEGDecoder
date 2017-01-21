@@ -13,7 +13,6 @@ JpegDec	KEYWORD1
 #######################################
 
 pImage	KEYWORD2
-thisPtr	KEYWORD2
 width	KEYWORD2
 height	KEYWORD2
 comps	KEYWORD2

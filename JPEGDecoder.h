@@ -83,7 +83,7 @@ private:
     uint decoded_width, decoded_height;
     uint row_blocks_per_mcu, col_blocks_per_mcu;
     uint8 status;
-    uint8 jpg_source = 0;
+    uint8 jpg_source;
     uint8_t* jpg_data; 
     
     static uint8 pjpeg_callback(unsigned char* pBuf, unsigned char buf_size, unsigned char *pBytes_actually_read, void *pCallback_data);
@@ -93,7 +93,6 @@ private:
 public:
 
     uint16_t *pImage;
-    JPEGDecoder *thisPtr;
 
     int width;
     int height;

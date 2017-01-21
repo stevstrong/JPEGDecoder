@@ -36,23 +36,24 @@ JPEGDecoder::JPEGDecoder(){
     mcu_x = 0 ;
     mcu_y = 0 ;
     is_available = 0;
-    thisPtr = this;
+	jpg_source = 0;
 }
 
 
 JPEGDecoder::~JPEGDecoder(){
-    pImage = 0;//delete pImage;
+    abort();
 }
 
 
-uint8_t JPEGDecoder::pjpeg_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data) {
-    JPEGDecoder *thisPtr = JpegDec.thisPtr ;
-    thisPtr->pjpeg_need_bytes_callback(pBuf, buf_size, pBytes_actually_read, pCallback_data);
+uint8_t JPEGDecoder::pjpeg_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data)
+{
+    JpegDec.pjpeg_need_bytes_callback(pBuf, buf_size, pBytes_actually_read, pCallback_data);
     return 0;
 }
 
 
-uint8_t JPEGDecoder::pjpeg_need_bytes_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data) {
+uint8_t JPEGDecoder::pjpeg_need_bytes_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data)
+{
     uint n;
 
     pCallback_data;
@@ -86,7 +87,8 @@ int JPEGDecoder::decode_mcu(void) {
     if (status) {
         is_available = 0 ;
         mcu_y = 0;
-		pImage = 0;//delete pImage;
+pImage = 0;//delete pImage;//
+Serial.print("status: "); Serial.println((int)status, HEX);
 		
 #ifdef LOAD_SPIFFS
         if (jpg_source == JPEG_FS_FILE) g_pInFileFs.close();
@@ -101,8 +103,7 @@ int JPEGDecoder::decode_mcu(void) {
             Serial.print("pjpeg_decode_mcu() failed with status ");
             Serial.println(status);
             #endif
-
-            pImage = 0;//delete pImage;
+			pImage = 0;//delete pImage;//
             return -1;
         }
     }
@@ -117,7 +118,7 @@ int JPEGDecoder::read(void) {
     if(is_available == 0) return 0;
 
     if (mcu_y >= image_info.m_MCUSPerCol) {
-        pImage = 0;//delete pImage;
+        pImage = 0;//delete pImage;//
 		
 #ifdef LOAD_SPIFFS
         if (jpg_source == JPEG_FS_FILE) g_pInFileFs.close();
@@ -310,7 +311,7 @@ int JPEGDecoder::decodeArray(const uint8_t array[], uint32_t  array_size) {
     return decodeCommon();
 }
 
-uint16_t img[16*16];
+static uint16_t img[16*16];
 int JPEGDecoder::decodeCommon(void)
 {
     status = pjpeg_decode_init(&image_info, pjpeg_callback, NULL, 0);
@@ -367,12 +368,13 @@ int JPEGDecoder::decodeCommon(void)
     return decode_mcu();
 }
 
-void JPEGDecoder::abort(void) {
-
+void JPEGDecoder::abort(void)
+{
     mcu_x = 0 ;
     mcu_y = 0 ;
     is_available = 0;
-    pImage = 0;//delete pImage;
+	jpg_source = 0;
+    pImage = 0;//delete pImage;//
 	
   #ifdef LOAD_SPIFFS
 	if (jpg_source == JPEG_FS_FILE) if (g_pInFileFs) g_pInFileFs.close();
