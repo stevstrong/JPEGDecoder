@@ -1194,14 +1194,10 @@ static uint8 initFrame(void)
    else
       return PJPG_UNSUPPORTED_COLORSPACE;
 
-   Serial.print("gMaxMCUXSize: "); Serial.println(gMaxMCUXSize);//debug
-   Serial.print("gMaxMCUYSize: "); Serial.println(gMaxMCUYSize);//debug
-
    gMaxMCUSPerRow = (gImageXSize + (gMaxMCUXSize - 1)) >> ((gMaxMCUXSize == 8) ? 3 : 4);
    gMaxMCUSPerCol = (gImageYSize + (gMaxMCUYSize - 1)) >> ((gMaxMCUYSize == 8) ? 3 : 4);
    
    gNumMCUSRemaining = gMaxMCUSPerRow * gMaxMCUSPerCol;
-   Serial.print("gNumMCUSRemaining: "); Serial.println(gNumMCUSRemaining);//debug
    
    return 0;
 }

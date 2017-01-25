@@ -34,33 +34,41 @@
                    tidy up code.
 */
 
+//#define DEBUG 1
+
 #include "JPEGDecoder.h"
 #include "picojpeg.h"
 
 JPEGDecoder JpegDec;
 
-JPEGDecoder::JPEGDecoder(){
-    mcu_x = 0 ;
-    mcu_y = 0 ;
-    is_available = 0;
-    thisPtr = this;
+JPEGDecoder::JPEGDecoder()
+{
+	jpg_source = 0;
+	abort();
 }
 
 
-JPEGDecoder::~JPEGDecoder(){
-    if (pImage) delete pImage;
-	pImage = NULL;
+JPEGDecoder::~JPEGDecoder()
+{
+    abort();
 }
 
 
-uint8_t JPEGDecoder::pjpeg_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data) {
-    JPEGDecoder *thisPtr = JpegDec.thisPtr ;
-    thisPtr->pjpeg_need_bytes_callback(pBuf, buf_size, pBytes_actually_read, pCallback_data);
+uint8_t JPEGDecoder::pjpeg_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data)
+{
+#ifdef DEBUG
+	Serial.println("JPEGDecoder pjpeg_callback...");
+#endif
+    JpegDec.pjpeg_need_bytes_callback(pBuf, buf_size, pBytes_actually_read, pCallback_data);
     return 0;
 }
 
 
-uint8_t JPEGDecoder::pjpeg_need_bytes_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data) {
+uint8_t JPEGDecoder::pjpeg_need_bytes_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data)
+{
+#ifdef DEBUG
+	Serial.println("JPEGDecoder pjpeg_need_bytes_callback...");
+#endif
     uint n;
 
     pCallback_data;
@@ -87,9 +95,12 @@ uint8_t JPEGDecoder::pjpeg_need_bytes_callback(uint8_t* pBuf, uint8_t buf_size, 
     return 0;
 }
 
-int JPEGDecoder::decode_mcu(void) {
-
-    status = pjpeg_decode_mcu();
+int JPEGDecoder::decode_mcu(void)
+{
+#ifdef DEBUG
+	Serial.println("JPEGDecoder decode_mcu...");
+#endif
+    uint8_t status = pjpeg_decode_mcu();
 
     if (status) {
         is_available = 0 ;
@@ -107,7 +118,11 @@ int JPEGDecoder::decode_mcu(void) {
 }
 
 
-int JPEGDecoder::read(void) {
+int JPEGDecoder::read(void)
+{
+#ifdef DEBUG
+	Serial.println("JPEGDecoder read...");
+#endif
     int y, x;
     uint16_t *pDst_row;
 
@@ -146,6 +161,7 @@ int JPEGDecoder::read(void) {
 #endif
 						pSrcR++;
 					}
+                    pDst_block += MCUWidth;
 				}
             }
             else {
@@ -166,11 +182,11 @@ int JPEGDecoder::read(void) {
                     pSrcG += (8 - bx_limit);
                     pSrcB += (8 - bx_limit);
 
-                    pDst_block += row_pitch;
+                    pDst_block += MCUWidth;
                 }
             }
         }
-        pDst_row += (row_pitch * 8);
+        pDst_row += (MCUWidth * 8);
     }
 
     MCUx = mcu_x;
@@ -188,10 +204,9 @@ int JPEGDecoder::read(void) {
 }
 
 
-
-	// Generic file call for SD or SPIFFS, uses leading / to distinguish SPIFFS files
-int JPEGDecoder::decodeFile(const char *pFilename){
-
+// Generic file call for SD or SPIFFS, uses leading / to distinguish SPIFFS files
+int JPEGDecoder::decodeFile(const char *pFilename)
+{
 #ifdef ESP8266
   #ifdef LOAD_SD_LIBRARY
 	if (*pFilename == '/')
@@ -206,8 +221,8 @@ int JPEGDecoder::decodeFile(const char *pFilename){
 	return -1;
 }
 
-int JPEGDecoder::decodeFile(const String& pFilename){
-
+int JPEGDecoder::decodeFile(const String& pFilename)
+{
 #ifdef ESP8266
   #ifdef LOAD_SD_LIBRARY
 	if (pFilename.charAt(0) == '/')
@@ -224,24 +239,23 @@ int JPEGDecoder::decodeFile(const String& pFilename){
 
 
 #ifdef LOAD_SPIFFS
-
-	// Call specific to SPIFFS
-int JPEGDecoder::decodeFsFile(const char *pFilename) {
-
+// Call specific to SPIFFS
+int JPEGDecoder::decodeFsFile(const char *pFilename)
+{
 	fs::File pInFile = SPIFFS.open( pFilename, "r");
 
 	return decodeFsFile(pInFile);
 }
 
-int JPEGDecoder::decodeFsFile(const String& pFilename) {
-
+int JPEGDecoder::decodeFsFile(const String& pFilename)
+{
 	fs::File pInFile = SPIFFS.open( pFilename, "r");
 
 	return decodeFsFile(pInFile);
 }
 
-int JPEGDecoder::decodeFsFile(fs::File jpgFile) { // This is for the SPIFFS library
-
+int JPEGDecoder::decodeFsFile(fs::File jpgFile) // This is for the SPIFFS library
+{
     g_pInFileFs = jpgFile;
 
     jpg_source = JPEG_FS_FILE; // Flag to indicate a SPIFFS file
@@ -265,24 +279,23 @@ int JPEGDecoder::decodeFsFile(fs::File jpgFile) { // This is for the SPIFFS libr
 
 
 #ifdef LOAD_SD_LIBRARY
-
-	// Call specific to SD filing system in case leading / is used
-int JPEGDecoder::decodeSdFile(const char *pFilename) {
-
+// Call specific to SD filing system in case leading / is used
+int JPEGDecoder::decodeSdFile(const char *pFilename)
+{
 	File pInFile = SD.open( pFilename, FILE_READ);
 
 	return decodeSdFile(pInFile);
 }
 
-int JPEGDecoder::decodeSdFile(const String& pFilename) {
-
+int JPEGDecoder::decodeSdFile(const String& pFilename)
+{
 	File pInFile = SD.open( pFilename, FILE_READ);
 
 	return decodeSdFile(pInFile);
 }
 
-int JPEGDecoder::decodeSdFile(File jpgFile) { // This is for the SD library
-
+int JPEGDecoder::decodeSdFile(File jpgFile) // This is for the SD library
+{
     g_pInFileSd = jpgFile;
 
     jpg_source = JPEG_SD_FILE; // Flag to indicate a SD file
@@ -305,23 +318,30 @@ int JPEGDecoder::decodeSdFile(File jpgFile) { // This is for the SD library
 #endif
 
 
-int JPEGDecoder::decodeArray(const uint8_t array[], uint32_t  array_size) {
-
+int JPEGDecoder::decodeArray(const uint8_t array[], uint32_t  array_size)
+{
+#ifdef DEBUG
+	Serial.println("JPEGDecoder decodeArray...");
+#endif
     jpg_source = JPEG_ARRAY; // We are not processing a file, use arrays
 
-    g_nInFileOfs = 0;
-
     jpg_data = (uint8_t *)array;
+
+    g_nInFileOfs = 0;
 
     g_nInFileSize = array_size;
 
     return decodeCommon();
 }
 
+static uint16_t img[16*16];
 
-int JPEGDecoder::decodeCommon(void) {
-
-    status = pjpeg_decode_init(&image_info, pjpeg_callback, NULL, 0);
+int JPEGDecoder::decodeCommon(void)
+{
+#ifdef DEBUG
+	Serial.println("JPEGDecoder decodeCommon...");
+#endif
+    uint8_t status = pjpeg_decode_init(&image_info, pjpeg_callback, NULL, 0);
 
     if (status) {
         #ifdef DEBUG
@@ -336,28 +356,13 @@ int JPEGDecoder::decodeCommon(void) {
         return -1;
     }
 
-    decoded_width =  image_info.m_width;
-    decoded_height =  image_info.m_height;
-	
-    row_pitch = image_info.m_MCUWidth;
-    pImage = new uint16_t[image_info.m_MCUWidth * image_info.m_MCUHeight];
-    if (!pImage) {
-        #ifdef DEBUG
-        Serial.println("Memory Allocation Failure");
-        #endif
-
-        return -1;
-    }
-    memset(pImage , 0 , sizeof(pImage));
-
-    row_blocks_per_mcu = image_info.m_MCUWidth >> 3;
-    col_blocks_per_mcu = image_info.m_MCUHeight >> 3;
-
     is_available = 1 ;
 
-    width = decoded_width;
-    height = decoded_height;
-    comps = 1;
+	pImage = img;
+    memset(pImage , 0 , sizeof(pImage));
+
+    width =  image_info.m_width;
+    height =  image_info.m_height;
     MCUSPerRow = image_info.m_MCUSPerRow;
     MCUSPerCol = image_info.m_MCUSPerCol;
     scanType = image_info.m_scanType;
@@ -367,12 +372,14 @@ int JPEGDecoder::decodeCommon(void) {
     return decode_mcu();
 }
 
-void JPEGDecoder::abort(void) {
-
-    mcu_x = 0 ;
-    mcu_y = 0 ;
-    is_available = 0;
-    if(pImage) delete pImage;
+void JPEGDecoder::abort(void)
+{
+#ifdef DEBUG
+	Serial.println("JPEGDecoder abort...");
+#endif
+	mcu_x = 0 ;
+	mcu_y = 0 ;
+	is_available = 0;
 	pImage = NULL;
 	
   #ifdef LOAD_SPIFFS
@@ -383,5 +390,3 @@ void JPEGDecoder::abort(void) {
     if (jpg_source == JPEG_SD_FILE) if (g_pInFileSd) g_pInFileSd.close();
   #endif
 }
-
-

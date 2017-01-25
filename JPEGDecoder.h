@@ -22,23 +22,13 @@
 
   #include "arduino.h"
   #include <pgmspace.h>
-
-  // If the sketch has included FS.h without setting FS_NO_GLOBALS then it is likely
-  // there will be a redefinition of 'class fs::File' error due to conflict with the
-  // SD library, so we can't load the SD library.
-  #if !defined (FS_NO_GLOBALS) && defined (FS_H)
-    #undef LOAD_SD_LIBRARY
-  #endif
  
+  #define LOAD_SPIFFS
+  #define FS_NO_GLOBALS
+  #include <FS.h>
+  
   #ifdef LOAD_SD_LIBRARY
     #include <SD.h> 
-  #endif
-  
-  #define LOAD_SPIFFS
-  
-  #ifndef FS_H
-    #define FS_NO_GLOBALS
-    #include <FS.h>
   #endif
   
 #else
@@ -56,7 +46,7 @@
 #include "picojpeg.h"
 
 enum {
- JPEG_ARRAY = 0,
+ JPEG_ARRAY = 1,
  JPEG_FS_FILE,
  JPEG_SD_FILE
 };
@@ -89,10 +79,6 @@ private:
     int mcu_y;
     uint g_nInFileSize;
     uint g_nInFileOfs;
-    uint row_pitch;
-    uint decoded_width, decoded_height;
-    uint row_blocks_per_mcu, col_blocks_per_mcu;
-    uint8 status;
     uint8 jpg_source;
     uint8_t* jpg_data; 
     
@@ -106,7 +92,6 @@ public:
 
     int width;
     int height;
-    int comps;
     int MCUSPerRow;
     int MCUSPerCol;
     pjpeg_scan_type_t scanType;

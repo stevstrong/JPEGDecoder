@@ -2,7 +2,7 @@
 // Commenting out the line is NOT essential but will save some FLASH space if
 // SD Card access is not needed.
 
-#define LOAD_SD_LIBRARY
+//#define LOAD_SD_LIBRARY
 
 #ifdef ESP8266
     // Comment out the next #define if you do not want the bytes swapped in
