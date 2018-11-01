@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include <Arduino.h>
 #include "picojpeg.h"
+
+#pragma GCC optimize "-O3"
 //------------------------------------------------------------------------------
 // Set to 1 if right shifts on signed ints are always unsigned (logical) shifts
 // When 1, arithmetic right shifts will be emulated by using a logical shift
@@ -216,19 +218,16 @@ static uint16 gNumMCUSRemaining;
 static uint8 gMCUOrg[6];
 
 static pjpeg_need_bytes_callback_t g_pNeedBytesCallback;
-static void *g_pCallback_data;
 static uint8 gCallbackStatus;
 static uint8 gReduce;
 //------------------------------------------------------------------------------
 static void fillInBuf(void)
 {
-   unsigned char status;
-
    // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
    gInBufOfs = 4;
    gInBufLeft = 0;
 
-   status = (*g_pNeedBytesCallback)(gInBuf + gInBufOfs, PJPG_MAX_IN_BUF_SIZE - gInBufOfs, &gInBufLeft, g_pCallback_data);
+   uint8 status = (*g_pNeedBytesCallback)(gInBuf + gInBufOfs, PJPG_MAX_IN_BUF_SIZE - gInBufOfs, &gInBufLeft);
    if (status)
    {
       // The user provided need bytes callback has indicated an error, so record the error and continue trying to decode.
@@ -2125,30 +2124,31 @@ static uint8 decodeNextMCU(void)
             return status;
       }
       gRestartsLeft--;
-   }      
+   }
 
    for (mcuBlock = 0; mcuBlock < gMaxBlocksPerMCU; mcuBlock++)
    {
       uint8 componentID = gMCUOrg[mcuBlock];
       uint8 compQuant = gCompQuant[componentID];	
       uint8 compDCTab = gCompDCTab[componentID];
-      uint8 k;
+      uint8 numExtraBits, compACTab, k;
       const int16* pQ = compQuant ? gQuant1 : gQuant0;
+      uint16 r, dc;
 
       uint8 s = huffDecode(compDCTab ? &gHuffTab1 : &gHuffTab0, compDCTab ? gHuffVal1 : gHuffVal0);
-
-      uint16 r = 0;
-      uint8 numExtraBits = s & 0xF;
+      
+      r = 0;
+      numExtraBits = s & 0xF;
       if (numExtraBits)
          r = getBits2(numExtraBits);
+      dc = huffExtend(r, s);
 
-      uint16 dc = huffExtend(r, s);
       dc = dc + gLastDC[componentID];
       gLastDC[componentID] = dc;
 
       gCoeffBuf[0] = dc * pQ[0];
 
-      uint8 compACTab = gCompACTab[componentID];
+      compACTab = gCompACTab[componentID];
 
       if (gReduce)
       {
@@ -2195,9 +2195,11 @@ static uint8 decodeNextMCU(void)
          // Decode and dequantize AC coefficients
          for (k = 1; k < 64; k++)
          {
+            uint16 extraBits;
+
             s = huffDecode(compACTab ? &gHuffTab3 : &gHuffTab2, compACTab ? gHuffVal3 : gHuffVal2);
 
-            uint16 extraBits = 0;
+            extraBits = 0;
             numExtraBits = s & 0xF;
             if (numExtraBits)
                extraBits = getBits2(numExtraBits);
@@ -2207,6 +2209,8 @@ static uint8 decodeNextMCU(void)
 
             if (s)
             {
+               int16 ac;
+
                if (r)
                {
                   if ((k + r) > 63)
@@ -2219,7 +2223,7 @@ static uint8 decodeNextMCU(void)
                   }
                }
 
-               int16 ac = huffExtend(extraBits, s);
+               ac = huffExtend(extraBits, s);
                
                gCoeffBuf[ZAG[k]] = ac * pQ[k]; 
             }
@@ -2250,7 +2254,7 @@ static uint8 decodeNextMCU(void)
    return 0;
 }
 //------------------------------------------------------------------------------
-unsigned char pjpeg_decode_mcu(void)
+int pjpeg_decode_mcu(void)
 {
    uint8 status;
    
@@ -2269,10 +2273,8 @@ unsigned char pjpeg_decode_mcu(void)
    return 0;
 }
 //------------------------------------------------------------------------------
-unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_callback_t pNeed_bytes_callback, void *pCallback_data, unsigned char reduce)
+int pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_callback_t pNeed_bytes_callback, unsigned char reduce)
 {
-   uint8 status;
-
    pInfo->m_width = 0; pInfo->m_height = 0; pInfo->m_comps = 0;
    pInfo->m_MCUSPerRow = 0; pInfo->m_MCUSPerCol = 0;
    pInfo->m_scanType = PJPG_GRAYSCALE;
@@ -2280,11 +2282,10 @@ unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_call
    pInfo->m_pMCUBufR = (unsigned char*)0; pInfo->m_pMCUBufG = (unsigned char*)0; pInfo->m_pMCUBufB = (unsigned char*)0;
 
    g_pNeedBytesCallback = pNeed_bytes_callback;
-   g_pCallback_data = pCallback_data;
    gCallbackStatus = 0;
    gReduce = reduce;
 
-   status = pjpeg_init();
+   uint8 status = pjpeg_init();
    if ((status) || (gCallbackStatus))
       return gCallbackStatus ? gCallbackStatus : status;
 

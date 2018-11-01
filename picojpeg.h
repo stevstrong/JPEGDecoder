@@ -53,7 +53,7 @@ enum
 // Scan types
 typedef enum
 {
-   PJPG_GRAYSCALE,
+   PJPG_GRAYSCALE = 0x0000,
    PJPG_YH1V1,
    PJPG_YH2V1,
    PJPG_YH1V2,
@@ -63,22 +63,22 @@ typedef enum
 typedef struct
 {
    // Image resolution
-   int m_width;
-   int m_height;
+   int16 m_width;
+   int16 m_height;
    
    // Number of components (1 or 3)
-   int m_comps;
+   int16 m_comps;
    
    // Total number of minimum coded units (MCU's) per row/col.
-   int m_MCUSPerRow;
-   int m_MCUSPerCol;
+   int16 m_MCUSPerRow;
+   int16 m_MCUSPerCol;
    
    // Scan type
    pjpeg_scan_type_t m_scanType;
    
    // MCU width/height in pixels (each is either 8 or 16 depending on the scan type)
-   int m_MCUWidth;
-   int m_MCUHeight;
+   int16 m_MCUWidth;
+   int16 m_MCUHeight;
 
    // m_pMCUBufR, m_pMCUBufG, and m_pMCUBufB are pointers to internal MCU Y or RGB pixel component buffers.
    // Each time pjpegDecodeMCU() is called successfully these buffers will be filled with 8x8 pixel blocks of Y or RGB pixels.
@@ -109,18 +109,18 @@ typedef struct
    unsigned char *m_pMCUBufB;
 } pjpeg_image_info_t;
 
-typedef unsigned char (*pjpeg_need_bytes_callback_t)(unsigned char* pBuf, unsigned char buf_size, unsigned char *pBytes_actually_read, void *pCallback_data);
+typedef int (*pjpeg_need_bytes_callback_t)(unsigned char* pBuf, unsigned char buf_size, unsigned char *pBytes_actually_read);
 
 // Initializes the decompressor. Returns 0 on success, or one of the above error codes on failure.
 // pNeed_bytes_callback will be called to fill the decompressor's internal input buffer.
 // If reduce is 1, only the first pixel of each block will be decoded. This mode is much faster because it skips the AC dequantization, IDCT and chroma upsampling of every image pixel.
 // Not thread safe.
-unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_callback_t pNeed_bytes_callback, void *pCallback_data, unsigned char reduce);
+int pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_callback_t pNeed_bytes_callback, unsigned char reduce);
 
 // Decompresses the file's next MCU. Returns 0 on success, PJPG_NO_MORE_BLOCKS if no more blocks are available, or an error code.
 // Must be called a total of m_MCUSPerRow*m_MCUSPerCol times to completely decompress the image.
 // Not thread safe.
-unsigned char pjpeg_decode_mcu(void);
+int pjpeg_decode_mcu(void);
 
 #ifdef __cplusplus
 }
