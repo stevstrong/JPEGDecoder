@@ -8,6 +8,12 @@
 extern "C" {
 #endif
 
+//------------------------------------------------------------------------------
+typedef unsigned char   uint8;
+typedef unsigned short  uint16;
+typedef signed char     int8;
+typedef signed short    int16;
+//------------------------------------------------------------------------------
 // Error codes
 enum
 {
@@ -109,18 +115,18 @@ typedef struct
    unsigned char *m_pMCUBufB;
 } pjpeg_image_info_t;
 
-typedef int (*pjpeg_need_bytes_callback_t)(unsigned char* pBuf, unsigned char buf_size, unsigned char *pBytes_actually_read);
+typedef uint8 (*pjpeg_need_bytes_callback_t)(unsigned char* pBuf, unsigned char buf_size, unsigned char *pBytes_actually_read);
 
 // Initializes the decompressor. Returns 0 on success, or one of the above error codes on failure.
 // pNeed_bytes_callback will be called to fill the decompressor's internal input buffer.
 // If reduce is 1, only the first pixel of each block will be decoded. This mode is much faster because it skips the AC dequantization, IDCT and chroma upsampling of every image pixel.
 // Not thread safe.
-int pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_callback_t pNeed_bytes_callback, unsigned char reduce);
+uint8 pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_callback_t pNeed_bytes_callback, unsigned char reduce);
 
 // Decompresses the file's next MCU. Returns 0 on success, PJPG_NO_MORE_BLOCKS if no more blocks are available, or an error code.
 // Must be called a total of m_MCUSPerRow*m_MCUSPerCol times to completely decompress the image.
 // Not thread safe.
-int pjpeg_decode_mcu(void);
+uint8 pjpeg_decode_mcu(void);
 
 #ifdef __cplusplus
 }

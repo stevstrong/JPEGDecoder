@@ -14,40 +14,12 @@
 // Define PJPG_INLINE to "inline" if your C compiler supports explicit inlining
 #define PJPG_INLINE
 //------------------------------------------------------------------------------
-typedef unsigned char   uint8;
-typedef unsigned short  uint16;
-typedef signed char     int8;
-typedef signed short    int16;
-//------------------------------------------------------------------------------
 #if PJPG_RIGHT_SHIFT_IS_ALWAYS_UNSIGNED
-static int16 replicateSignBit16(int8 n)
-{
-   switch (n)
-   {
-      case 0:  return 0x0000;
-      case 1:  return 0x8000;
-      case 2:  return 0xC000;
-      case 3:  return 0xE000;
-      case 4:  return 0xF000;
-      case 5:  return 0xF800;
-      case 6:  return 0xFC00;
-      case 7:  return 0xFE00;
-      case 8:  return 0xFF00;
-      case 9:  return 0xFF80;
-      case 10: return 0xFFC0;
-      case 11: return 0xFFE0;
-      case 12: return 0xFFF0; 
-      case 13: return 0xFFF8;
-      case 14: return 0xFFFC;
-      case 15: return 0xFFFE;
-      default: return 0xFFFF;
-   }
-}
 static PJPG_INLINE int16 arithmeticRightShiftN16(int16 x, int8 n) 
 {
    int16 r = (uint16)x >> (uint8)n;
    if (x < 0)
-      r |= replicateSignBit16(n);
+      r |= (0xFFFF0000>>n)&0xFFFF;
    return r;
 }
 static PJPG_INLINE long arithmeticRightShift8L(long x) 
@@ -215,19 +187,16 @@ static uint16 gNumMCUSRemaining;
 static uint8 gMCUOrg[6];
 
 static pjpeg_need_bytes_callback_t g_pNeedBytesCallback;
-static void *g_pCallback_data;
 static uint8 gCallbackStatus;
 static uint8 gReduce;
 //------------------------------------------------------------------------------
 static void fillInBuf(void)
 {
-   unsigned char status;
-
    // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
    gInBufOfs = 4;
    gInBufLeft = 0;
 
-   status = (*g_pNeedBytesCallback)(gInBuf + gInBufOfs, PJPG_MAX_IN_BUF_SIZE - gInBufOfs, &gInBufLeft, g_pCallback_data);
+   uint8 status = (*g_pNeedBytesCallback)(gInBuf + gInBufOfs, PJPG_MAX_IN_BUF_SIZE - gInBufOfs, &gInBufLeft);
    if (status)
    {
       // The user provided need bytes callback has indicated an error, so record the error and continue trying to decode.
@@ -342,58 +311,40 @@ static PJPG_INLINE uint8 getBit(void)
    
    return ret;
 }
-//------------------------------------------------------------------------------
-static uint16 getExtendTest(uint8 i)
-{
-   switch (i)
-   {
-      case 0: return 0;
-      case 1: return 0x0001;
-      case 2: return 0x0002;
-      case 3: return 0x0004;
-      case 4: return 0x0008;
-      case 5: return 0x0010; 
-      case 6: return 0x0020;
-      case 7: return 0x0040;
-      case 8:  return 0x0080;
-      case 9:  return 0x0100;
-      case 10: return 0x0200;
-      case 11: return 0x0400;
-      case 12: return 0x0800;
-      case 13: return 0x1000;
-      case 14: return 0x2000; 
-      case 15: return 0x4000;
-      default: return 0;
-   }      
-}
+
 //------------------------------------------------------------------------------
 static int16 getExtendOffset(uint8 i)
-{ 
+{
+   //return ((0xFFFF<<i) + 1);
    switch (i)
    {
-      case 0: return 0;
-      case 1: return ((-1)<<1) + 1; 
-      case 2: return ((-1)<<2) + 1; 
-      case 3: return ((-1)<<3) + 1; 
-      case 4: return ((-1)<<4) + 1; 
-      case 5: return ((-1)<<5) + 1; 
-      case 6: return ((-1)<<6) + 1; 
-      case 7: return ((-1)<<7) + 1; 
-      case 8: return ((-1)<<8) + 1; 
-      case 9: return ((-1)<<9) + 1;
-      case 10: return ((-1)<<10) + 1; 
-      case 11: return ((-1)<<11) + 1; 
-      case 12: return ((-1)<<12) + 1; 
-      case 13: return ((-1)<<13) + 1; 
-      case 14: return ((-1)<<14) + 1; 
-      case 15: return ((-1)<<15) + 1;
+      case  0: return 0;
+      case  1: return (0xFFFF); 
+      case  2: return (0xFFFD); 
+      case  3: return (0xFFF9); 
+      case  4: return (0xFFF1); 
+      case  5: return (0xFFE1); 
+      case  6: return (0xFFC1); 
+      case  7: return (0xFF81); 
+      case  8: return (0xFF01); 
+      case  9: return (0xFE01);
+      case 10: return (0xFC01); 
+      case 11: return (0xF801); 
+      case 12: return (0xF001); 
+      case 13: return (0xE001); 
+      case 14: return (0xC001); 
+      case 15: return (0x8001);
       default: return 0;
    }
 };
 //------------------------------------------------------------------------------
 static PJPG_INLINE int16 huffExtend(uint16 x, uint8 s)
 {
-   return ((x < getExtendTest(s)) ? ((int16)x + getExtendOffset(s)) : (int16)x);
+   if (s==0) return (int16)x;
+   s &= 0x0F; // 16 bit resolution
+   //return ((x < getExtendTest(s)) ? ((int16)x + getExtendOffset(s)) : (int16)x);
+   return ((x < (1<<(s-1))) ? ((int16)x + getExtendOffset(s)) : (int16)x);
+   //return ((x < (1<<(s-1))) ? ((int16)x + ((0xFFFF<<s) + 1)) : (int16)x);
 }
 //------------------------------------------------------------------------------
 static PJPG_INLINE uint8 huffDecode(const HuffTable* pHuffTable, const uint8* pHuffVal)
@@ -715,6 +666,7 @@ static uint8 readSOSMarker(void)
    spectral_end    = (uint8)getBits1(8);
    successive_high = (uint8)getBits1(4);
    successive_low  = (uint8)getBits1(4);
+   (void)spectral_start; (void)spectral_end; (void)successive_high; (void)successive_low; // unused
 
    left -= 3;
 
@@ -942,7 +894,7 @@ static uint8 locateSOSMarker(uint8* pFoundEOI)
    return readSOSMarker();
 }
 //------------------------------------------------------------------------------
-static uint8 init(void)
+static uint8 pjpeg_init(void)
 {
    gImageXSize = 0;
    gImageYSize = 0;
@@ -1022,6 +974,7 @@ static uint8 processRestart(void)
    
    return 0;
 }
+#if 0 // not used
 //------------------------------------------------------------------------------
 // FIXME: findEOI() is not actually called at the end of the image 
 // (it's optional, and probably not needed on embedded devices)
@@ -1048,6 +1001,7 @@ static uint8 findEOI(void)
    
    return 0;
 }
+#endif
 //------------------------------------------------------------------------------
 static uint8 checkHuffTables(void)
 {
@@ -2260,7 +2214,7 @@ static uint8 decodeNextMCU(void)
    return 0;
 }
 //------------------------------------------------------------------------------
-unsigned char pjpeg_decode_mcu(void)
+uint8 pjpeg_decode_mcu(void)
 {
    uint8 status;
    
@@ -2279,10 +2233,8 @@ unsigned char pjpeg_decode_mcu(void)
    return 0;
 }
 //------------------------------------------------------------------------------
-unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_callback_t pNeed_bytes_callback, void *pCallback_data, unsigned char reduce)
+uint8 pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_callback_t pNeed_bytes_callback, unsigned char reduce)
 {
-   uint8 status;
-   
    pInfo->m_width = 0; pInfo->m_height = 0; pInfo->m_comps = 0;
    pInfo->m_MCUSPerRow = 0; pInfo->m_MCUSPerCol = 0;
    pInfo->m_scanType = PJPG_GRAYSCALE;
@@ -2290,11 +2242,10 @@ unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo, pjpeg_need_bytes_call
    pInfo->m_pMCUBufR = (unsigned char*)0; pInfo->m_pMCUBufG = (unsigned char*)0; pInfo->m_pMCUBufB = (unsigned char*)0;
 
    g_pNeedBytesCallback = pNeed_bytes_callback;
-   g_pCallback_data = pCallback_data;
    gCallbackStatus = 0;
    gReduce = reduce;
     
-   status = init();
+   uint8 status = pjpeg_init();
    if ((status) || (gCallbackStatus))
       return gCallbackStatus ? gCallbackStatus : status;
    

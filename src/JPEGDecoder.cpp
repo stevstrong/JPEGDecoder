@@ -55,22 +55,19 @@ JPEGDecoder::~JPEGDecoder(){
 }
 
 
-uint8_t JPEGDecoder::pjpeg_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data) {
+uint8_t JPEGDecoder::pjpeg_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read) {
 	JPEGDecoder *thisPtr = JpegDec.thisPtr ;
-	thisPtr->pjpeg_need_bytes_callback(pBuf, buf_size, pBytes_actually_read, pCallback_data);
+	thisPtr->pjpeg_need_bytes_callback(pBuf, buf_size, pBytes_actually_read);
 	return 0;
 }
 
 
-uint8_t JPEGDecoder::pjpeg_need_bytes_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read, void *pCallback_data) {
-	uint n;
-
-	pCallback_data;
-
-	n = jpg_min(g_nInFileSize - g_nInFileOfs, buf_size);
+uint8_t JPEGDecoder::pjpeg_need_bytes_callback(uint8_t* pBuf, uint8_t buf_size, uint8_t *pBytes_actually_read)
+{
+	uint n = jpg_min(g_nInFileSize - g_nInFileOfs, buf_size);
 
 	if (jpg_source == JPEG_ARRAY) { // We are handling an array
-		for (int i = 0; i < n; i++) {
+		for (uint i = 0; i < n; i++) {
 			pBuf[i] = pgm_read_byte(jpg_data++);
 			//Serial.println(pBuf[i],HEX);
 		}
@@ -407,7 +404,7 @@ int JPEGDecoder::decodeArray(const uint8_t array[], uint32_t  array_size) {
 
 int JPEGDecoder::decodeCommon(void) {
 
-	status = pjpeg_decode_init(&image_info, pjpeg_callback, NULL, 0);
+	status = pjpeg_decode_init(&image_info, pjpeg_callback, 0);
 
 	if (status) {
 		#ifdef DEBUG
