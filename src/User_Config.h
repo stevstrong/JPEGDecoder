@@ -2,7 +2,7 @@
 // Commenting out the line is NOT essential but will save some FLASH space if
 // SD Card access is not needed. Note: use of SdFat is currently untested!
 
-#define LOAD_SD_LIBRARY // Default SD Card library
+//#define LOAD_SD_LIBRARY // Default SD Card library
 //#define LOAD_SDFAT_LIBRARY // Use SdFat library instead, so SD Card SPI can be bit bashed
 
 

@@ -267,21 +267,16 @@ int JPEGDecoder::readSwappedBytes(void) {
 }
 
 
+#if defined (LOAD_SD_LIBRARY) || defined (LOAD_SDFAT_LIBRARY)
 // Generic file call for SD or SPIFFS, uses leading / to distinguish SPIFFS files
 int JPEGDecoder::decodeFile(const char *pFilename){
 
 #if defined (ESP8266) || defined (ESP32)
-#if defined (LOAD_SD_LIBRARY) || defined (LOAD_SDFAT_LIBRARY)
 	if (*pFilename == '/')
-#endif
-	return decodeFsFile(pFilename);
+		return decodeFsFile(pFilename);
 #endif
 
-#if defined (LOAD_SD_LIBRARY) || defined (LOAD_SDFAT_LIBRARY)
 	return decodeSdFile(pFilename);
-#endif
-
-	return -1;
 }
 
 int JPEGDecoder::decodeFile(const String& pFilename){
@@ -293,12 +288,9 @@ int JPEGDecoder::decodeFile(const String& pFilename){
 	return decodeFsFile(pFilename);
 #endif
 
-#if defined (LOAD_SD_LIBRARY) || defined (LOAD_SDFAT_LIBRARY)
 	return decodeSdFile(pFilename);
-#endif
-
-	return -1;
 }
+#endif
 
 
 #ifdef LOAD_SPIFFS
